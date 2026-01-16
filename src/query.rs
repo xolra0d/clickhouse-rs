@@ -172,7 +172,7 @@ impl Query {
         // However, we still allow overriding it to support several niche use-cases,
         // e.g., temporary tables usage. See https://github.com/ClickHouse/clickhouse-rs/issues/230
         if readonly {
-            let readonly_value = match self.client.options.get(settings::READONLY) {
+            let readonly_value = match self.client.settings.get(settings::READONLY) {
                 None => "1",
                 Some(value) => value,
             };
@@ -183,7 +183,7 @@ impl Query {
             pairs.append_pair(settings::COMPRESS, "1");
         }
 
-        for (name, value) in &self.client.options {
+        for (name, value) in &self.client.settings {
             pairs.append_pair(name, value);
         }
 
@@ -208,8 +208,8 @@ impl Query {
 
     /// Configure the [roles] to use when executing this query.
     ///
-    /// Overrides any roles previously set by this method, [`Query::with_option`],
-    /// [`Client::with_roles`] or [`Client::with_option`].
+    /// Overrides any roles previously set by this method, [`Query::with_setting`],
+    /// [`Client::with_roles`] or [`Client::with_setting`].
     ///
     /// An empty iterator may be passed to clear the set roles.
     ///
@@ -223,8 +223,8 @@ impl Query {
 
     /// Clear any explicit [roles] previously set on this `Query` or inherited from [`Client`].
     ///
-    /// Overrides any roles previously set by [`Query::with_roles`], [`Query::with_option`],
-    /// [`Client::with_roles`] or [`Client::with_option`].
+    /// Overrides any roles previously set by [`Query::with_roles`], [`Query::with_setting`],
+    /// [`Client::with_roles`] or [`Client::with_setting`].
     ///
     /// [roles]: https://clickhouse.com/docs/operations/access-rights#role-management
     pub fn with_default_roles(self) -> Self {
@@ -235,8 +235,15 @@ impl Query {
     }
 
     /// Similar to [`Client::with_option`], but for this particular query only.
+    #[deprecated(since = "0.15.0", note = "please use `with_setting` instead")]
     pub fn with_option(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
-        self.client.set_option(name, value);
+        self.client.set_setting(name, value);
+        self
+    }
+
+    /// Similar to [`Client::with_setting`], but for this particular query only.
+    pub fn with_setting(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.client.set_setting(name, value);
         self
     }
 
@@ -249,7 +256,7 @@ impl Query {
             self.sql = SqlBuilder::Failed(format!("invalid param: {err}"));
             self
         } else {
-            self.with_option(format!("param_{name}"), param)
+            self.with_setting(format!("param_{name}"), param)
         }
     }
 }
